@@ -1,0 +1,68 @@
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+# CIFAR-10 데이터셋 불러오기
+(train_images, train_labels), (test_images, test_labels) = datasets.cifar10.load_data()
+
+# 데이터 전처리: 픽셀 값을 0~1 사이로 정규화
+train_images, test_images = train_images / 255.0, test_images / 255.0
+
+
+# 데이터 증강 설정
+datagen = ImageDataGenerator(
+    rotation_range=15,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    horizontal_flip=True,
+    zoom_range=0.1,
+    fill_mode='nearest')
+
+# 데이터 증강 적용
+datagen.fit(train_images)
+# Convolutional Neural Network (CNN) 모델 정의
+model = models.Sequential([
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.MaxPooling2D((2, 2)),
+    layers.Conv2D(128, (3, 3), activation='relu'),  # 추가된 층
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),  # 변경된 뉴런 수
+    layers.Dense(10)
+])
+base_model = tf.keras.applications.ResNet50(weights='imagenet', include_top=False, input_shape=(32, 32, 3))
+
+
+model = models.Sequential()
+model.add(base_model)
+model.add(layers.GlobalAveragePooling2D())
+model.add(layers.Dense(10, activation='softmax'))
+# 모델 컴파일
+optimizer = tf.keras.optimizers.Adam(learning_rate=0.0001)  # 학습률 조정
+model.compile(optimizer=optimizer,
+              loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              metrics=['accuracy'])
+# 모델 훈련
+history = model.fit(train_images, train_labels, epochs=10,  
+                    validation_data=(test_images, test_labels))
+
+# 모델 평가
+test_loss, test_acc = model.evaluate(test_images,  test_labels, verbose=2)
+print('\nTest accuracy:', test_acc)
+
+base_model = tf.keras.applications.ResNet50(weights='imagenet', include_top=False, input_shape=(32, 32, 3))
+
+
+
+# 정확도 및 손실 그래프 그리기
+plt.plot(history.history['accuracy'], label='accuracy')
+plt.plot(history.history['val_accuracy'], label = 'val_accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.ylim([0, 1])
+plt.legend(loc='lower right')
+plt.show()
+
+
+     
